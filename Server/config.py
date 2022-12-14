@@ -1,0 +1,4 @@
+port = 55607
+host = "localhost"#"192.168.0.104"
+salt = b'!\xc7\x1c\xe2\xcb\x1a\xcd\x81QoY\xd3\x18*\x1e\x98\x91\xc8\xd7\x97\xc9\xdb\xae\x00v\x025\x95\xfb\x85v\x98'
+config_bd = ["localhost","root","MariaDB","chatmenager"]
