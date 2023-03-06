@@ -4,7 +4,7 @@ from InterfaceData.Painter.PaintAndMask import CtreateAvatar
 from UpdateThreadMessage import new_message_monitor
 from ConnectThreadMonitor import message_monitor
 from ssl import SSLContext,PROTOCOL_TLSv1
-from Support import PixmapToBase64
+from Support import PixmapToBase64,list_id
 from PyQt5.QtGui import QIcon
 from threading import Thread
 from socket import socket,AF_INET,SOCK_STREAM
@@ -41,9 +41,9 @@ class LocalClient(object):
         self.message_chats = {}
         self.users = {}
 
-        self.chatsid = []
+        self.chatsid = list_id()
         self.last_message_chats = {}
-        self.users_id = []
+        self.users_id = list_id()
 
     def Icon(self, src):
         with open(src, "rb", ) as image:
@@ -158,9 +158,8 @@ class LocalClient(object):
                         self.last_message_chats[i] = max(messages, key=lambda x: x[0])[0]
                     else:
                         self.last_message_chats[i] = 0
-            self.users_id += list(filter(lambda x: x not in self.users_id, self.users.keys()))
-            self.new_message.update_list(self.chatsid, self.last_message_chats,
-                                         self.users_id)
+            self.users_id |= list_id(self.users.keys())
+            self.new_message.update_list(self.chatsid.to_list(), self.last_message_chats,self.users_id)
 
     def AddChat(self,item):
         self.chats.append(item)

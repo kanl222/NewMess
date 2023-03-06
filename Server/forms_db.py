@@ -1,17 +1,17 @@
 def Insert_Form_User() -> str:
-    return "insert into Users(username, email,password,icon) values (%s,%s,%s,%s)"
+    return "insert into Users(username, email,password,icon) values (?,?,?,?)"
 
 
 def Insert_Form_Chat() -> str:
-    return "insert into Chat(title,icon) values (%s,%s)"
+    return "insert into Chat(title,icon) values (?,?)"
 
 
 def Insert_Form_Chat_Participant() -> str:
-    return "insert into сhatparticipant(id_user,id_chat) values (%s,%s)"
+    return "insert into сhatparticipant(id_user,id_chat) values (?,?)"
 
 
 def Insert_Form_Message() -> str:
-    return "insert into message(chat_id,user_id,message,datetime_) values (%s,%s,%s,%s)"
+    return "insert into message(chat_id,user_id,message,datetime_) values (?,?,?,?)"
 
 
 def Insert_Form_Session(**kwargs) -> str:
@@ -55,5 +55,5 @@ def Get_Update_Chats(id_user: int,list_chat_id:list) -> str:
     return "SELECT * From chat WHERE id In(SELECT id_chat From сhatparticipant WHERE id_user = {0});".format(id_user)
 
 def UpdateIcomInDB():
-    return """UPDATE Users SET icon=%s WHERE id = %s;"""
+    return """UPDATE Users SET icon=? WHERE id = ?;"""
 

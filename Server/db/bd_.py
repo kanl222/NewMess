@@ -1,18 +1,15 @@
-import Server.config as config
+
 import threading
-import mysql.connector
+import sqlite3
 
 class SelectMySqlConnection(object):
     def __init__(self, dburi=None):
         self.lock = threading.Lock()
-        self.connection = mysql.connector.connect(host="localhost",    # your host, usually localhost
-                            user="root",         # your username
-                            passwd="MariaDB",  # your passworde
-                            database="chatmenager")        # name of the data bas
+        self.connection = sqlite3.connect('db/BaseDate.db',timeout=20,check_same_thread=True)       # name of the data bas
         self.cursor = None
     def __enter__(self):
         self.lock.acquire()
-        self.cursor = self.connection.cursor(buffered=True)
+        self.cursor = self.connection.cursor()
         return self.cursor
 
     def __exit__(self, type, value, traceback):
@@ -24,10 +21,7 @@ class SelectMySqlConnection(object):
 class InsertMySqlConnection(object):
     def __init__(self, dburi=None):
         self.lock = threading.Lock()
-        self.connection = mysql.connector.connect(host="localhost",    # your host, usually localhost
-                            user="root",         # your username
-                            passwd="MariaDB",  # your passworde
-                            database="chatmenager")
+        self.connection = sqlite3.connect('db/BaseDate.db',timeout=20,check_same_thread=True)
         self.cursor = None
 
     def __enter__(self):

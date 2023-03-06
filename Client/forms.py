@@ -1,4 +1,4 @@
-from Client.config import salt
+from config import salt
 from datetime import datetime
 import hashlib
 import base64

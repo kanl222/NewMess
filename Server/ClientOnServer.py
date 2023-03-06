@@ -14,7 +14,6 @@ class Client(Thread):
         Thread.__init__(self, daemon=True)
         self.socket = socket
         self.signal = True
-        self.Activated = False
 
     def Send_Data(self, data: dict) -> None:
         serialized_data = dumps(data)
@@ -40,7 +39,7 @@ class Client(Thread):
                 cur.execute(form(), (*args,))
             else:
                 cur.executemany(form(), (*args,))
-            return cur._last_insert_id if return_id else None
+            return cur.lastrowid if return_id else None
 
     def Select_Data(self, form, *args, one_request=False) -> list:
         with SelectMySqlConnection() as cur:
@@ -51,12 +50,11 @@ class Client(Thread):
                 else:
                     return cur.fetchall()
             except Exception as e:
-                print(form(*args),e)
+                print(form(*args), e)
 
     def Disconnect(self):
         self.signal = False
         connections.remove(self)
-
 
     def run(self):
         while self.signal:
@@ -64,24 +62,23 @@ class Client(Thread):
                 data_ = self.Receive_Data()
             except ConnectionError:
                 return self.Disconnect()
-            if not self.Activated:
-                if data_['request'] == 'AUTHORIZATIONS':
-                    self.Authorization(data_)
-                elif data_['request'] == 'REGISTRATION':
-                    self.Registration(data_)
-            else:
-                if data_['request'] == 'UPDATE':
-                    self.Update(data_)
-                elif data_['request'] == 'FIND':
-                    self.FindUsers(data_)
-                elif data_['request'] == 'CREATECHAT':
-                    self.AddChat(data_)
-                elif data_['request'] == 'MESSAGE':
-                    self.Messega(data_)
-                elif data_['request'] == 'UpdateIcon':
-                    self.UpdateIcon(data_)
-                elif data_['request'] == 'SignOut':
-                    self.SignOut()
+            if data_['request'] == 'AUTHORIZATIONS':
+                self.Authorization(data_)
+            elif data_['request'] == 'REGISTRATION':
+                self.Registration(data_)
+            elif data_['request'] == 'UPDATE':
+                self.Update(data_)
+            elif data_['request'] == 'FIND':
+                self.FindUsers(data_)
+            elif data_['request'] == 'CREATECHAT':
+                self.AddChat(data_)
+            elif data_['request'] == 'MESSAGE':
+                self.Messega(data_)
+            elif data_['request'] == 'UpdateIcon':
+                self.UpdateIcon(data_)
+            elif data_['request'] == 'SignOut':
+                self.SignOut()
+
 
     def SignOut(self):
         self.Activated = False
@@ -147,17 +144,15 @@ class Client(Thread):
         self.Send_Data(FindUsers(users))
 
     def Update(self, data: dict):
-        chats_id = data['chats_id']
-        user_id = data['user_id']
-        last_id_message_chat = data['last_id_message_chat']
+        chats_id,user_id,last_id_message_chat = data['chats_id'],data['user_id'],data['last_id_message_chat']
         users, messages = {}, []
         chats = self.Select_Data(Get_Update_Chats, user_id, chats_id)
         if chats:
             list_id_chat = list(map(lambda x: x[0], chats))
             users = self.Select_Data(Get_Users_In_Chat, list_id_chat, data['users_id'])
         if chats_id:
-            mes = self.Select_Data(Get_Find_Message_In_Chat, chats_id,user_id)
-            messages = list(filter(lambda x: last_id_message_chat[x[1]] < x[0],mes))
+            mes = self.Select_Data(Get_Find_Message_In_Chat, chats_id, user_id)
+            messages = list(filter(lambda x: last_id_message_chat[x[1]] < x[0], mes))
         messages = SortingListInDict(messages, 1) if messages != [] else {}
         users = SortingListInDict(users, 0) if users != [] else {}
         self.Send_Data(UpdateChatsAndUsers(users, messages, chats))
