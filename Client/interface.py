@@ -11,15 +11,15 @@ TestName = ['from', '4', 'Join', 'Test']
 
 
 class settings(QMainWindow):
-    def __init__(self, parent=None, client=None):
+    def __init__(self, parent=None, mysignal=None,icon:str=None):
         super().__init__(parent)
-        self.client = client
+        self.mysignal = mysignal
         uic.loadUi('InterfaceData/ui/settings_.ui', self)
         self.setGeometry(0, 0, 600, 80)
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.Exit_Settings.clicked.connect(self.Exit_)
         self.EditIconlUser_.clicked.connect(self.dialog)
-        self.setIconUser(self.client.icon)
+        self.setIconUser(icon)
 
         self.Exit_Settings.setStyleSheet("""QPushButton#Exit_Settings {
                                 border: 1px
@@ -61,15 +61,15 @@ class settings(QMainWindow):
                                    file.rsplit('.', maxsplit=1)[-1])
                 self.Image = PixmapToBase64(Icon_)
                 self.IconUser_.setPixmap(Icon_)
-                self.client.Sending_request_data(form='UpdateIconUser', Icon=self.Image)
+                self.mysignal.emit(dict(form='UpdateIconUser', Icon=self.Image))
         except Exception as e:
             print(e)
 
 
 class Creater_Chat_(QMainWindow):
-    def __init__(self, parent=None, client=None):
+    def __init__(self, parent=None, mysignal=None):
         super().__init__(parent)
-        self.client = client
+        self.mysignal = mysignal
         self.ChatParticipantId = list()
         self.IconCustominCreateChat = QLabel
         self.CountParticipants = QLabel
@@ -93,7 +93,7 @@ class Creater_Chat_(QMainWindow):
 
     def __Find(self):
         text = self.LineEditToCreateChat.text()
-        self.client.Sending_request_data(form='Find', SearchTarget=text)
+        self.mysignal.emit(dict(form='Find', SearchTarget=text))
 
     def Find_Handler(self, listuser: list):
         self.listWidgetCreateChat.clear()
@@ -108,10 +108,10 @@ class Creater_Chat_(QMainWindow):
 
     def __Created(self):
         try:
-            self.client.Sending_request_data(form='CreateChat',
+            self.mysignal.emit(dict(form='CreateChat',
                                              title=self.NameChatLineEdit.text(),
                                              ListIdUsers=self.ChatParticipantId,
-                                             Icon=self.Image)
+                                             Icon=self.Image))
             self.ChatParticipantId = list()
             self.NameChatLineEdit.clear()
             self.CountParticipants.setText('0')
@@ -149,11 +149,11 @@ class Creater_Chat_(QMainWindow):
 
 
 class AuthorizationsUser(QMainWindow):
-    def __init__(self, client):
+    def __init__(self, mysignal):
         super().__init__()
         uic.loadUi('InterfaceData/ui/Authorization.ui', self)
         self.Error_login.hide()
-        self.client = client
+        self.mysignal = mysignal
         self.Enter.clicked.connect(self.Enter_)
         self.Exit_Login.clicked.connect(self.Exit_)
         self.Roll_Up_Login.clicked.connect(self.Roll_up)
@@ -195,9 +195,9 @@ class AuthorizationsUser(QMainWindow):
             name, password = self.NameLogin.text(), self.PasswordLogin.text()
             if not name: raise ValidationError('Введите имя пользователя')
             if not password: raise ValidationError('Введите пароль пользователя')
-            self.client.Sending_request_data(form='Authorizations',
+            self.mysignal.emit(dict(form='Authorizations',
                                              name=self.NameLogin.text(),
-                                             password=self.PasswordLogin.text())
+                                             password=self.PasswordLogin.text()))
         except ValidationError as e:
             self.Error_mes(*e.args)
         except Exception as e:
@@ -206,7 +206,7 @@ class AuthorizationsUser(QMainWindow):
     def Registration_1(self):
         self.widget.Registration()
 
-    def Get_widget(self, widget):
+    def Get_Frame(self, widget):
         self.widget = widget
 
     def Roll_up(self):
@@ -226,9 +226,9 @@ class AuthorizationsUser(QMainWindow):
 
 
 class RegistrationWindow(QMainWindow):
-    def __init__(self, client):
+    def __init__(self,mysignal):
         super().__init__()
-        self.client = client
+        self.mysignal = mysignal
         self.setStyleSheet("""border-radius:0px;""")
 
         uic.loadUi('InterfaceData/ui/Registr.ui', self)  # Загружаем дизайн
@@ -272,16 +272,15 @@ class RegistrationWindow(QMainWindow):
             pasw_valid(password)
             name_valid(name)
             email_valid(email)
-            self.client.Sending_request_data(form='Registration',
-                                             name=self.NameRegister.text(),
-                                             email=self.EmailRegister.text(),
-                                             password=self.PasswordRegister.text())
+            self.mysignal.emit(dict(form='Registration',name=self.NameRegister.text(),
+                                            email=self.EmailRegister.text(),
+                                             password=self.PasswordRegister.text()))
 
         except ValidationError as e:
             self.Error_mes(*e.args)
 
 
-    def Get_widget(self, widget):
+    def Get_Frame(self, widget):
         self.widget = widget
 
 
@@ -308,10 +307,11 @@ class RegistrationWindow(QMainWindow):
 
 
 class MyChatsManager(QMainWindow):
-    def __init__(self, client):
+    def __init__(self, mysignal):
         super().__init__()
-        self.client = client
+        self.mysignal = mysignal
         self.Id_chat = 0
+        self.chats = []
         self.Chat = QListWidget()
         self.TitleBar = QWidget
         uic.loadUi('InterfaceData/ui/ChatsManager.ui', self)
@@ -449,11 +449,11 @@ class MyChatsManager(QMainWindow):
                 self.textEdit.clear()
                 self.Chat.clear()
             self.NameChat.setText(
-            [i for i in self.client.chats if i[0] == self.Id_chat][0][1])
-            if self.client.message_chats != {}:
-                for message in self.client.message_chats[self.Id_chat]:
+            [i for i in self.chats if i[0] == self.Id_chat][0][1])
+            if self.message_chats != {}:
+                for message in self.mysignal.message_chats[self.Id_chat]:
                     if message[2] != self.id:
-                        _, username, icon = self.client.users[message[2]][0]
+                        _, username, icon = self.mysignal.users[message[2]][0]
                         self.Add_message(username, message[3], icon)
                     else:
                         self.Add_message(self.username, message[3], self.icon)
@@ -472,8 +472,8 @@ class MyChatsManager(QMainWindow):
         self.email = email
         self.icon = icon
 
-        self.sittings_window = settings(client=self.client)
-        self.CreateChat = Creater_Chat_(client=self.client)
+        self.sittings_window = settings(self.mysignal)
+        self.CreateChat = Creater_Chat_(self.mysignal)
 
     def showScreen(self):
         try:
@@ -484,12 +484,11 @@ class MyChatsManager(QMainWindow):
     def SettingsStart(self):
         self.sittings_window.show()
 
-    @pyqtSlot()
     def LoadChats(self):
-        [self.Add_Chat_In_Menu(*i) for i in self.client.chats]
+        [self.Add_Chat_In_Menu(*i) for i in self.chats]
 
 
-    @pyqtSlot()
+    @pyqtSlot(int,str,str)
     def Add_Chat_In_Menu(self, id, title, icon):
         myQCustomQWidget = QChat()
         myQCustomQWidget.setTextUp(title)
@@ -506,12 +505,12 @@ class MyChatsManager(QMainWindow):
         try:
             if self.textEdit.toPlainText():
                 message = self.textEdit.toPlainText()
-                self.client.Sending_request_data(form='Message', id_chat=self.Id_chat,
-                                                 message=message)
+                self.mysignal.emit(dict(form='Message', id_chat=self.Id_chat,
+                                                 message=message))
         except Exception as e:
             print(e)
 
-    def Get_widget(self, widget):
+    def Get_Frame(self, widget):
         self.widget = widget
 
     def Creater_Chat(self):
@@ -534,7 +533,7 @@ class MyChatsManager(QMainWindow):
         self.ChatsMenu.clear()
 
     def SignOut(self):
-        self.client.SignOut()
+        self.mysignal.SignOut()
 
     @pyqtSlot()
     def Add_message(self, user, message, icon, testflag=False):

@@ -31,15 +31,19 @@ class Client(Thread):
         return loads(received_payload)
 
     def check_password(self, passwd_hash, password) -> bool:
+        print(password,passwd_hash)
         return password == passwd_hash
 
     def Insert_Data(self, form, *args, return_id=False, one_execut=True):
         with InsertMySqlConnection() as cur:
-            if one_execut:
-                cur.execute(form(), (*args,))
-            else:
-                cur.executemany(form(), (*args,))
-            return cur.lastrowid if return_id else None
+            try:
+                if one_execut:
+                    cur.execute(form(), (*args,))
+                else:
+                    cur.executemany(form(), (*args,))
+                return cur.lastrowid if return_id else None
+            except Exception as e:
+                print(form(*args), e)
 
     def Select_Data(self, form, *args, one_request=False) -> list:
         with SelectMySqlConnection() as cur:
@@ -88,8 +92,7 @@ class Client(Thread):
     def Authorization(self, data: dict):
         user = self.Select_Data(Get_User, data['username'], one_request=True)
         if user is None: return self.Send_Data(Error('ThereIsNoSuchName'))
-        if not self.check_password(user[-2], data['password']): return self.Send_Data(Error('InvalidPassword'))
-        self.Activated = True
+        if not self.check_password(user[3], data['password']): return self.Send_Data(Error('InvalidPassword'))
         self.Send_Data(Ok_Authorization(user[0], user[1], user[2], user[-1]))
         return self.LoadChatsandUsers(user[0])
 
