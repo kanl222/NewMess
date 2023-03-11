@@ -11,8 +11,8 @@ TestName = ['from', '4', 'Join', 'Test']
 
 
 class settings(QMainWindow):
-    def __init__(self, parent=None, mysignal=None,icon:str=None):
-        super().__init__(parent)
+    def __init__(self,mysignal=None,icon:str=None):
+        super().__init__()
         self.mysignal = mysignal
         uic.loadUi('InterfaceData/ui/settings_.ui', self)
         self.setGeometry(0, 0, 600, 80)
@@ -67,8 +67,8 @@ class settings(QMainWindow):
 
 
 class Creater_Chat_(QMainWindow):
-    def __init__(self, parent=None, mysignal=None):
-        super().__init__(parent)
+    def __init__(self,mysignal=None):
+        super().__init__()
         self.mysignal = mysignal
         self.ChatParticipantId = list()
         self.IconCustominCreateChat = QLabel
@@ -472,7 +472,7 @@ class MyChatsManager(QMainWindow):
         self.email = email
         self.icon = icon
 
-        self.sittings_window = settings(self.mysignal)
+        self.sittings_window = settings(mysignal=self.mysignal,icon=icon)
         self.CreateChat = Creater_Chat_(self.mysignal)
 
     def showScreen(self):

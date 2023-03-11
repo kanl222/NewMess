@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS `chat` (
 
 -- Дамп данных таблицы chatmenager.chat: ~45 rows (приблизительно)
 /*!40000 ALTER TABLE `chat` DISABLE KEYS */;
-INSERT INTO `chat` (`id`, `title`, `icon`) VALUES
+INSERT INTO `chat` (`id`, `title`, ` `) VALUES
 	(1, 'Test1', NULL),
 	(2, 'Test2', NULL),
 	(3, 'Test3', NULL),

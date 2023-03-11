@@ -14,8 +14,8 @@ class Chats(SqlAlchemyBase):
 class messages(SqlAlchemyBase):
     __tablename__ = 'messages'
     id_messages = sqlalchemy.Column(sqlalchemy.Integer,primary_key=True,nullable=True)
-    id_user = sqlalchemy.Column(sqlalchemy.Integer,nullable=True)
-    id_chat = sqlalchemy.Column(sqlalchemy.Integer,nullable=True)
+    id_user = sqlalchemy.Column(sqlalchemy.Integer,sqlalchemy.ForeignKey("users.id"),nullable=True)
+    id_chat = sqlalchemy.Column(sqlalchemy.Integer,sqlalchemy.ForeignKey("chats.id"),nullable=True)
     message = sqlalchemy.Column(sqlalchemy.String,nullable=True)
 
 class users(SqlAlchemyBase):

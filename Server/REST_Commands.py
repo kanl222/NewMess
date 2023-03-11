@@ -79,3 +79,9 @@ def UpdateIconClient(icon) -> dict:
         'command': 'UPDATEICONCLIENT',
         'icon': icon,
     }
+
+def ISALIVE(is_alive:bool) -> dict:
+    return {
+        'command': 'ISALIVE',
+        'bool': is_alive,
+    }

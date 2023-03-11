@@ -1,3 +1,6 @@
+def Get_ID_User(username,email) -> str:
+    return f"SELECT id FROM Users WHERE username = '{username}' or email = '{email}';"
+
 def Insert_Form_User() -> str:
     return "insert into Users(username, email,password,icon) values (?,?,?,?)"
 
@@ -22,7 +25,10 @@ def Get_User(username: str) -> str:
     return f"SELECT * FROM Users WHERE username = '{username}';"
 
 
-def Get_Id(username: str) -> str:
+def Get_Id_User(username: str) -> str:
+    return f"SELECT id FROM Users WHERE username = '{username}'"
+
+def Get_Id_Chat(username: str) -> str:
     return f"SELECT id FROM Users WHERE username = '{username}'"
 
 

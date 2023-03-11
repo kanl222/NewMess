@@ -38,9 +38,8 @@ class LocalClient(object):
         self.registerform = self.frame.registerform
         self.chatform = self.frame.chatform
         self.frame.Authorization()
-
-        self.connect_to_server()
         self.frame.show()
+        self.connect_to_server()
 
     def ConfigClient(self):
         self.Activated = False
@@ -86,7 +85,7 @@ class LocalClient(object):
             print(e)
 
     def Error_System(self, CodeError: int):
-        if CodeError == 4004:
+        if CodeError == 404:
             pass
             # return self.Reconnect()
 
@@ -101,7 +100,6 @@ class LocalClient(object):
     def Command_handler(self, data: dict) -> None:
         if not self.Activated:
             if data['command'] in ('OK_AUTHORIZATION', 'OK_REGISTRATION'):
-                try:
                     self.Activated = True
                     self.id = data['id']
                     self.name = data['username']
@@ -111,13 +109,11 @@ class LocalClient(object):
                         self.UpdateIcon(data['icon'])
                     else:
                         self.chatform.setIconUser(self.icon)
-                        self.new_message.start()
+                    self.new_message.start()
                     self.chatform.Update_config(data['id'], data['username'], data['email'], self.icon)
                     self.new_message.Update_id(self.id)
                     self.frame.LaunchMyChat()
-                    return
-                except Exception as e:
-                    print(e)
+                    
         else:
             try:
                 if data['command'] == 'USERSFIND':
@@ -127,14 +123,12 @@ class LocalClient(object):
                     self.message_chats = data['messages']
                     self.users = data['users']
                     self.Update_list_id()
-                    self.new_message.start()
                     self.chatform.chats = self.chats
                     return self.chatform.LoadChats()
                 if data['command'] == 'UPDATE':
                     Thread(target=self.Handler_update, args=(data, self.chatform), daemon=True).run()
                 if data['command'] == 'MESSAGE':
                     return self.AddMessage(data)
-
                 if data['command'] == 'UPDATEICONCLIENT':
                     return self.UpdateIcon(data['icon'])
             except Exception:
@@ -187,14 +181,14 @@ class LocalClient(object):
             self.sock_ = socket(AF_INET, SOCK_STREAM)
             self.sock_.connect((host, port))
             self.sock = self.context.wrap_socket(self.sock_, server_hostname=self.hostname)
-
-            # Запускаем мониторинги входящих сообщений
-            self.connect_monitor.server_socket = self.sock
-            self.new_message.server_socket = self.sock
-            self.connect_monitor.start()
         except Exception:
             sleep(5)
             self.connect_to_server()
+        # Запускаем мониторинги входящих сообщений
+        self.connect_monitor.server_socket = self.sock
+        self.new_message.server_socket = self.sock
+        self.connect_monitor.start()
+
 
     def sending_request_data(self,kwargs:dict) -> None:
         print(kwargs)

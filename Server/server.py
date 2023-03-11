@@ -8,10 +8,12 @@ from PyQt5.QtWidgets import QMainWindow, QApplication, QListWidget, QListWidgetI
     QLabel, QPlainTextEdit
 from PyQt5.QtCore import pyqtSlot
 from PyQt5 import uic
-
+from data.db import *
 from config import *
-from ClientOnServer import Client, connections
-
+from ClientOnServer import HandlerRequests, connections
+def create_connect_db(file_name, max_queue_size=100):
+    global db__
+    db__ = Sqlite3Worker(file_name, max_queue_size=0)
 
 class QTextEditLogger(logging.Handler):
     def __init__(self, parent: QListWidget):
@@ -65,7 +67,6 @@ class ServerApp(QMainWindow):
         self.ssock.close()
         [i.Disconnect() for i in connections]
         self.conn = None
-
         self.Disable()
 
     def Starting(self):
@@ -87,7 +88,8 @@ class ServerApp(QMainWindow):
         while self.ActServer:
             try:
                 sock, address = socket.accept()
-                connections.append(Client(sock))
+                print(1)
+                connections.append(HandlerRequests(sock,db__))
                 connections[-1].start()
                 time.sleep(0.01)
                 logging.info(f"Connection: {address}.")
@@ -97,7 +99,9 @@ class ServerApp(QMainWindow):
                 logging.error(f"Error: {e}.")
 
 
+
 if __name__ == '__main__':
+    create_connect_db('db/BaseDate.db')
     app = QApplication(sys.argv)
     ServerInt = ServerApp()
     ServerInt.show()
