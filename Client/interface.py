@@ -2,7 +2,7 @@
 from InterfaceData.InterfaceObject.Object import *
 from InterfaceData.Painter.PaintAndMask import mask_image
 from Support import Icon, PixmapToBase64
-from Validators import PasswordValidator, EmailValidator, NameValidator, ValidationError
+from data.Validators import PasswordValidator, EmailValidator, NameValidator, ValidationError
 
 pasw_valid = PasswordValidator(3, 255)
 email_valid = EmailValidator()
@@ -509,6 +509,14 @@ class MyChatsManager(QMainWindow):
                                                  message=message))
         except Exception as e:
             print(e)
+            
+    def import_icon_chat(self,id):
+        with open(src, "rb", ) as image:
+            return base64.b64encode(image.read())
+        
+    def import_icon_user(self,id):
+        with open(src, "rb", ) as image:
+            return base64.b64encode(image.read())
 
     def Get_Frame(self, widget):
         self.widget = widget

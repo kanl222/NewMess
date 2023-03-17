@@ -29,7 +29,7 @@ class new_message_monitor(QThread):
     def run(self):
         try:
             while True:
-                self.msleep(50)
+                self.sleep(2)
                 if self.server_socket != None:
                     self.Send_Data(
                         Update(self.chatsid, self.last_message_chats, self.users_id,

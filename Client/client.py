@@ -5,16 +5,23 @@ from UpdateThreadMessage import new_message_monitor
 from ConnectThreadMonitor import message_monitor
 from ssl import SSLContext, PROTOCOL_TLSv1
 from Support import PixmapToBase64, list_id
-from data import db_session
+from data.db_session import *
 from PyQt5.QtGui import QIcon
 from threading import Thread
 from socket import socket, AF_INET, SOCK_STREAM
 from PyQt5.Qt import Qt
-from PyQt5.QtCore import QPoint,pyqtSignal
+from PyQt5.QtCore import QPoint, pyqtSignal
 from time import sleep
 from config import *
 from forms import *
 import sys
+import os
+
+def create_cash():
+    if not (os.path.exists('cash/icons/users') and os.path.exists('cash/icons/chats')):
+        os.makedirs('cash/icons/users')
+        os.makedirs('cash/icons/chats')
+    global_init('cash/LocalDataBaseClient.db')
 
 
 class LocalClient(object):
@@ -24,12 +31,13 @@ class LocalClient(object):
         self.context.load_verify_locations('Certificate/server.pem')
         self.ConfigClient()
 
+        self.list_handlers = []
+
         # Подключаем обработчики
         self.connect_monitor = message_monitor()
         self.new_message = new_message_monitor()
         self.new_message.mysignal.connect(self.Error_System)
         self.connect_monitor.mysignal.connect(self.signal_handler)
-        
 
         self.frame = MyWindow()
         self.frame.mysignal.connect(self.frame_handler)
@@ -59,9 +67,9 @@ class LocalClient(object):
     def Icon(self, src):
         with open(src, "rb", ) as image:
             return base64.b64encode(image.read())
-        
-    def frame_handler(self,data:dict) ->None:
-        __commands = {'SignOut':self.SignOut}
+
+    def frame_handler(self, data: dict) -> None:
+        __commands = {'SignOut': self.SignOut}
         if 'form' in data.keys():
             self.sending_request_data(data)
         else:
@@ -98,8 +106,9 @@ class LocalClient(object):
             return self.registerform.Error_mes('Tакое имя уже существует')
 
     def Command_handler(self, data: dict) -> None:
-        if not self.Activated:
-            if data['command'] in ('OK_AUTHORIZATION', 'OK_REGISTRATION'):
+        try:
+            if not self.Activated:
+                if data['command'] in ('OK_AUTHORIZATION', 'OK_REGISTRATION'):
                     self.Activated = True
                     self.id = data['id']
                     self.name = data['username']
@@ -109,13 +118,13 @@ class LocalClient(object):
                         self.UpdateIcon(data['icon'])
                     else:
                         self.chatform.setIconUser(self.icon)
+                    self.save_icon('user',self.icon,self.id)
                     self.new_message.start()
                     self.chatform.Update_config(data['id'], data['username'], data['email'], self.icon)
                     self.new_message.Update_id(self.id)
                     self.frame.LaunchMyChat()
-                    
-        else:
-            try:
+
+            else:
                 if data['command'] == 'USERSFIND':
                     return self.chatform.CreateChat.Find_Handler(data['listusers'])
                 if data['command'] == 'LISTCHATSANDUSERS':
@@ -126,13 +135,19 @@ class LocalClient(object):
                     self.chatform.chats = self.chats
                     return self.chatform.LoadChats()
                 if data['command'] == 'UPDATE':
-                    Thread(target=self.Handler_update, args=(data, self.chatform), daemon=True).run()
+                    self.list_handlers.append(Thread(target=self.Handler_update, args=(data,), daemon=True))
+                    self.list_handlers[-1].run()
                 if data['command'] == 'MESSAGE':
                     return self.AddMessage(data)
                 if data['command'] == 'UPDATEICONCLIENT':
                     return self.UpdateIcon(data['icon'])
-            except Exception:
-                pass
+        except Exception as e:
+            print(f'Command_handler: {e}')
+            
+    def save_icon(self,type_icon:str,icon:str,id:int):
+        if type_icon == 'user':
+            with open(f'cash/icons/users/{id}.png',mode='wb') as image:
+                return image.write(base64.b64decode(icon))
 
     def UpdateIcon(self, icon: base64):
         self.icon = icon
@@ -140,12 +155,13 @@ class LocalClient(object):
 
     def AddMessage(self, data):
         try:
-            self.message_chats[data['id_chat']] +=  [('', '', self.id, data['message'])]
+            self.message_chats[data['id_chat']] += [('', '', self.id, data['message'])]
             self.chatform.Add_message(self.name, data['message'], self.icon)
         except Exception as e:
             print(e)
 
     def Handler_update(self, data):
+        print(data)
         if data['chats']:
             [self.AddChat(i) for i in data['chats']]
             if data['users']:  self.users |= data['users']
@@ -157,7 +173,7 @@ class LocalClient(object):
                     for message in data['messages'][i]:
                         _, username, icon = self.users[message[2]][0]
                         self.chatform.Add_message(username, message[3], icon)
-        if data['chats'] or data['messages'] or data['users']: self.Update_list_id()
+        if data.values() and False: self.Update_list_id()
 
     def Update_list_id(self):
         self.chatsid += [x[0] for x in self.chats if x[0] not in self.chatsid.to_list()]
@@ -189,8 +205,7 @@ class LocalClient(object):
         self.new_message.server_socket = self.sock
         self.connect_monitor.start()
 
-
-    def sending_request_data(self,kwargs:dict) -> None:
+    def sending_request_data(self, kwargs: dict) -> None:
         print(kwargs)
         form = kwargs['form']
         try:
@@ -233,6 +248,7 @@ class LocalClient(object):
 
 class MyWindow(QStackedWidget):
     mysignal = pyqtSignal(dict)
+
     def __init__(self):
         super(MyWindow, self).__init__()
         self.setGeometry(0, 0, 600, 600)
@@ -301,7 +317,7 @@ class MyWindow(QStackedWidget):
 
 
 if __name__ == '__main__':
+    create_cash()
     app = QApplication(sys.argv)
-    db_session.global_init('db/LocalDataBaseClient.db')
     LocalClient = LocalClient()
     sys.exit(app.exec_())

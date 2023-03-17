@@ -1,20 +1,20 @@
-def Get_ID_User(username,email) -> str:
+def Get_ID_User(username:str,email:str) -> str:
     return f"SELECT id FROM Users WHERE username = '{username}' or email = '{email}';"
 
 def Insert_Form_User() -> str:
-    return "insert into Users(username, email,password,icon) values (?,?,?,?)"
+    return "insert into Users(username,email,hashed_password,creation_time,icon) values (?,?,?,?,?)"
 
 
 def Insert_Form_Chat() -> str:
-    return "insert into Chat(title,icon) values (?,?)"
+    return "insert into chats(title,icon) values (?,?)"
 
 
 def Insert_Form_Chat_Participant() -> str:
-    return "insert into СhatParticipant(id_user,id_chat) values (?,?)"
+    return "insert into chat_participants(id_chat,id_user) values (?,?)"
 
 
 def Insert_Form_Message() -> str:
-    return "insert into message(chat_id,user_id,message,datetime_) values (?,?,?,?)"
+    return "insert into message(id_user,id_chat,message,send_time_message) values (?,?,?,?)"
 
 
 def Insert_Form_Session(**kwargs) -> str:
@@ -38,12 +38,12 @@ def Get_Find_Users(id_user: int, find: str) -> str:
 
 
 def Get_Chats(id_user: int) -> str:
-    return "SELECT * From chat WHERE id In(SELECT id_chat From СhatParticipant WHERE id_user = {0});".format(
+    return "SELECT * From chats WHERE id In(SELECT id_chat From chat_participants WHERE id_user = {0});".format(
         id_user)
 
 
 def Get_Users_In_Chat(id_chats_list: list, id_users: list) -> str:
-    return "SELECT id,username,icon From Users WHERE id IN (SELECT DISTINCT id_user From СhatParticipant WHERE id_chat In ({0}) AND id_user not in ({1}));".format(
+    return "SELECT id,username,icon From Users WHERE id IN (SELECT DISTINCT id_user From chat_participants WHERE id_chat In ({0}) AND id_user not in ({1}));".format(
         ', '.join(list(map(str, id_chats_list))), ', '.join(list(map(str, id_users))))
 
 
@@ -57,8 +57,8 @@ def Get_Find_Message_In_Chat(chats_id:list,user_id:int) -> str:
 
 def Get_Update_Chats(id_user: int,list_chat_id:list) -> str:
     if list_chat_id:
-        return "SELECT * From chat WHERE id In(SELECT id_chat From СhatParticipant WHERE id_user = {0} AND id_chat not in ({1}));".format(id_user,', '.join(list(map(str, list_chat_id))))
-    return "SELECT * From chat WHERE id In(SELECT id_chat From СhatParticipant WHERE id_user = {0});".format(id_user)
+        return "SELECT * From chats WHERE id In(SELECT id_chat From chat_participants WHERE id_user = {0} AND id_chat not in ({1}));".format(id_user,', '.join(list(map(str, list_chat_id))))
+    return "SELECT * From chats WHERE id In(SELECT id_chat From chat_participants WHERE id_user = {0});".format(id_user)
 
 def UpdateIcomInDB():
     return """UPDATE Users SET icon=? WHERE id = ?;"""

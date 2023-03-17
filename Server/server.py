@@ -9,8 +9,10 @@ from PyQt5.QtWidgets import QMainWindow, QApplication, QListWidget, QListWidgetI
 from PyQt5.QtCore import pyqtSlot
 from PyQt5 import uic
 from data.db import *
+from data.check_db import check_and_create_db
 from config import *
 from ClientOnServer import HandlerRequests, connections
+
 def create_connect_db(file_name, max_queue_size=100):
     global db__
     db__ = Sqlite3Worker(file_name, max_queue_size=0)
@@ -63,20 +65,27 @@ class ServerApp(QMainWindow):
         self.Status.setStyleSheet("color:red")
 
     def Stoping(self):
-        self.sock.close()
-        self.ssock.close()
-        [i.Disconnect() for i in connections]
-        self.conn = None
-        self.Disable()
+        try:
+            self.sock.close()
+            db__ == None
+            [i.Disconnect() for i in connections]
+            self.conn = None
+            self.Disable()
+        except Exception:
+            pass
 
     def Starting(self):
         try:
             if not self.ActServer:
+                
                 self.ConfigServerSocket()
                 self.ActServer = True
                 self.conn = Thread(target=self.newConnections, args=(self.ssock,))
                 self.conn.start()
                 logging.info(f"Starting server: {host}:{port}.")
+                db_puth = 'db/ServerBaseDate.db'
+                check_and_create_db(db_puth)
+                create_connect_db(db_puth)
             else:
                 logging.error(f"A server is already running")
         except Exception as e:
@@ -101,7 +110,6 @@ class ServerApp(QMainWindow):
 
 
 if __name__ == '__main__':
-    create_connect_db('db/BaseDate.db')
     app = QApplication(sys.argv)
     ServerInt = ServerApp()
     ServerInt.show()

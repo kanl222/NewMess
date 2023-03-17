@@ -1,13 +1,14 @@
 from threading import Thread
 from Support import SortingListInDict
-from REST_Commands import *
+from rest import *
+import logging
 from pickle import dumps, loads
-from forms_db import *
+from request_sql import *
 from struct import pack, unpack
+from datetime import datetime
 
 connections = []
-
-import logging
+logging.Handler(1)
 class HandlerRequests(Thread):
     def __init__(self, socket,db):
         Thread.__init__(self, daemon=True)
@@ -35,7 +36,7 @@ class HandlerRequests(Thread):
 
     def Insert_Data(self, form, *args)-> None:
             try:
-                self.db.execute(form(*args))
+                self.db.execute(form(),args)
             except Exception as e:
                 print(form(*args), e)
 
@@ -51,32 +52,37 @@ class HandlerRequests(Thread):
 
     def Disconnect(self):
         self.signal = False
-        connections.remove(self)
+        try:
+            connections.remove(self)
+        except ValueError:
+            pass
 
     def run(self):
             while self.signal:
                 try:
                     data_ = self.Receive_Data()
+                    print(data_)
+                    if data_['request'] == 'AUTHORIZATIONS':
+                        self.Authorization(data_)
+                    elif data_['request'] == 'REGISTRATION':
+                        self.Registration(data_)
+                    elif data_['request'] == 'UPDATE':
+                        self.Update(data_)
+                    elif data_['request'] == 'FIND':
+                        self.FindUsers(data_)
+                    elif data_['request'] == 'CREATECHAT':
+                        self.AddChat(data_)
+                    elif data_['request'] == 'MESSAGE':
+                        self.Messega(data_)
+                    elif data_['request'] == 'UpdateIcon':
+                        self.UpdateIcon(data_)
+                    elif data_['request'] == 'SignOut':
+                        self.SignOut()
                 except ConnectionResetError:
                     self.Disconnect()
-                if data_['request'] == 'AUTHORIZATIONS':
-                    self.Authorization(data_)
-                elif data_['request'] == 'REGISTRATION':
-                    self.Registration(data_)
-                elif data_['request'] == 'UPDATE':
-                    self.Update(data_)
-                elif data_['request'] == 'FIND':
-                    self.FindUsers(data_)
-                elif data_['request'] == 'CREATECHAT':
-                    self.AddChat(data_)
-                elif data_['request'] == 'MESSAGE':
-                    self.Messega(data_)
-                elif data_['request'] == 'UpdateIcon':
-                    self.UpdateIcon(data_)
-                elif data_['request'] == 'SignOut':
-                    self.SignOut()
-            else:
-                self.Disconnect()
+                except Exception as err:
+                    logging.error(f'{self.name,err}')
+                    print(self.name,err)
 
 
 
@@ -89,18 +95,21 @@ class HandlerRequests(Thread):
         user = self.Select_Data(Get_User, data['username'], one_request=True)
         if user is None: return self.Send_Data(Error('ThereIsNoSuchName'))
         if not self.check_password(user[3], data['password']): return self.Send_Data(Error('InvalidPassword'))
-        self.Send_Data(Ok_Authorization(user[0], user[1], user[2], user[4]))
+        self.Send_Data(Ok_Authorization(id = user[0],username= user[1],email= user[2],icon= user[-1]))
+        print(Ok_Authorization(id = user[0],username= user[1],email= user[2],icon= user[-1]))
         return self.LoadChatsandUsers(user[0])
 
     """Фунция регистриции, нового пользователя"""
 
     def Registration(self, data: dict):
         user = self.Select_Data(Get_User, data['username'], one_request=True)
-        if user is not None: return self.Send_Data(Error('NameAlreadyExists'))
+        if user:
+            print(1,user)
+            return self.Send_Data(Error('NameAlreadyExists'))
         username, email, password, Icon = data['username'], data['email'], data[
             'password'], data['icon']
         self.Activated = True
-        self.Insert_Data(Insert_Form_User, username, email, password, Icon)
+        self.Insert_Data(Insert_Form_User, username, email, password,datetime.now(), Icon)
         id = self.Select_Data(Get_Id_User,username)
         return self.Send_Data(Ok_Registration(id, username, email))
 
@@ -146,13 +155,18 @@ class HandlerRequests(Thread):
     def Update(self, data: dict):
         chats_id,user_id,last_id_message_chat = data['chats_id'],data['user_id'],data['last_id_message_chat']
         users, messages = {}, []
+        if user_id and chats_id:
+            print(user_id, chats_id)
         chats = self.Select_Data(Get_Update_Chats, user_id, chats_id)
         if chats:
+            print(1)
             list_id_chat = list(map(lambda x: x[0], chats))
             users = self.Select_Data(Get_Users_In_Chat, list_id_chat, data['users_id'])
         if chats_id:
+            print(2)
             mes = self.Select_Data(Get_Find_Message_In_Chat, chats_id, user_id)
             messages = list(filter(lambda x: last_id_message_chat[x[1]] < x[0], mes))
+        print(users)
         messages = SortingListInDict(messages, 1) if messages != [] else {}
         users = SortingListInDict(users, 0) if users != [] else {}
         self.Send_Data(UpdateChatsAndUsers(users, messages, chats))

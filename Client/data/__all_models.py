@@ -8,7 +8,8 @@ class Chats(SqlAlchemyBase):
     id = sqlalchemy.Column(sqlalchemy.Integer,primary_key=True,nullable=True)
     tittle = sqlalchemy.Column(sqlalchemy.String,nullable=True)
     chat_participant = sqlalchemy.Column(sqlalchemy.BLOB,nullable=True)
-    icon = sqlalchemy.Column(sqlalchemy.String,nullable=True)
+    last_message_id  = sqlalchemy.Column(sqlalchemy.Integer,nullable=True)
+    icon = sqlalchemy.Column(sqlalchemy.LargeBinary,nullable=True)
 
 
 class messages(SqlAlchemyBase):
@@ -22,5 +23,5 @@ class users(SqlAlchemyBase):
     __tablename__ = 'users'
     id = sqlalchemy.Column(sqlalchemy.Integer,primary_key=True,nullable=True)
     username = sqlalchemy.Column(sqlalchemy.String,nullable=True)
-    icon = sqlalchemy.Column(sqlalchemy.String,nullable=True)
+    icon = sqlalchemy.Column(sqlalchemy.LargeBinary,nullable=True)
 

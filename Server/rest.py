@@ -17,10 +17,10 @@ def Update_key_sipher(key):
     }
 
 
-def Ok_Authorization(_id: int, username: str, email: str, icon: str) -> dict:
+def Ok_Authorization(id: int, username: str, email: str, icon: str) -> dict:
     return {
         'command': 'OK_AUTHORIZATION',
-        'id': _id,
+        'id': id,
         'username': username,
         'email': email,
         'icon': icon

@@ -25,6 +25,7 @@ class Sqlite3Worker(threading.Thread):
         self.exit_token = str(uuid.uuid4())
         self.start()
         self.thread_running = True
+        
 
     def run(self):
         execute_count = 0
@@ -55,12 +56,14 @@ class Sqlite3Worker(threading.Thread):
             except sqlite3.Error as err:
                 self.results[token] = (
                     "Query returned error: %s: %s: %s" % (query, values, err))
+                logging.error("Query returned error: %s: %s: %s" % (query, values, err))
         else:
             try:
                 print(values)
                 self.sqlite3_cursor.execute(query, values)
             except sqlite3.Error as err:
-                    pass
+                print(err)
+                logging.error(err)
 
     def close(self):
         """Close down the thread and close the sqlite3 database file."""
