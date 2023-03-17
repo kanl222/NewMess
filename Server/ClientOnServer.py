@@ -1,20 +1,20 @@
 from threading import Thread
 from Support import SortingListInDict
-from REST_Commands import *
+from rest import *
+import logging
 from pickle import dumps, loads
-from forms_db import *
-from db.bd_ import SelectMySqlConnection, InsertMySqlConnection
+from request_sql import *
 from struct import pack, unpack
+from datetime import datetime
 
 connections = []
-
-
-class Client(Thread):
-    def __init__(self, socket):
+logging.Handler(1)
+class HandlerRequests(Thread):
+    def __init__(self, socket,db):
         Thread.__init__(self, daemon=True)
-        self.socket = socket
         self.signal = True
-        self.Activated = False
+        self.socket = socket
+        self.db = db 
 
     def Send_Data(self, data: dict) -> None:
         serialized_data = dumps(data)
@@ -34,54 +34,57 @@ class Client(Thread):
     def check_password(self, passwd_hash, password) -> bool:
         return password == passwd_hash
 
-    def Insert_Data(self, form, *args, return_id=False, one_execut=True):
-        with InsertMySqlConnection() as cur:
-            if one_execut:
-                cur.execute(form(), (*args,))
-            else:
-                cur.executemany(form(), (*args,))
-            return cur._last_insert_id if return_id else None
-
-    def Select_Data(self, form, *args, one_request=False) -> list:
-        with SelectMySqlConnection() as cur:
+    def Insert_Data(self, form, *args)-> None:
             try:
-                cur.execute(form(*args))
-                if one_request:
-                    return cur.fetchone()
-                else:
-                    return cur.fetchall()
+                self.db.execute(form(),args)
             except Exception as e:
-                print(form(*args),e)
+                print(form(*args), e)
+
+    def Select_Data(self, form, *args,one_request=False) -> list:
+            try:
+                if one_request:
+                    return self.db.execute(form(*args))[0]
+                return self.db.execute(form(*args))
+            except IndexError:
+                return []
+            except Exception as e:
+                print(form(*args), e)
 
     def Disconnect(self):
         self.signal = False
-        connections.remove(self)
-
+        try:
+            connections.remove(self)
+        except ValueError:
+            pass
 
     def run(self):
-        while self.signal:
-            try:
-                data_ = self.Receive_Data()
-            except ConnectionError:
-                return self.Disconnect()
-            if not self.Activated:
-                if data_['request'] == 'AUTHORIZATIONS':
-                    self.Authorization(data_)
-                elif data_['request'] == 'REGISTRATION':
-                    self.Registration(data_)
-            else:
-                if data_['request'] == 'UPDATE':
-                    self.Update(data_)
-                elif data_['request'] == 'FIND':
-                    self.FindUsers(data_)
-                elif data_['request'] == 'CREATECHAT':
-                    self.AddChat(data_)
-                elif data_['request'] == 'MESSAGE':
-                    self.Messega(data_)
-                elif data_['request'] == 'UpdateIcon':
-                    self.UpdateIcon(data_)
-                elif data_['request'] == 'SignOut':
-                    self.SignOut()
+            while self.signal:
+                try:
+                    data_ = self.Receive_Data()
+                    print(data_)
+                    if data_['request'] == 'AUTHORIZATIONS':
+                        self.Authorization(data_)
+                    elif data_['request'] == 'REGISTRATION':
+                        self.Registration(data_)
+                    elif data_['request'] == 'UPDATE':
+                        self.Update(data_)
+                    elif data_['request'] == 'FIND':
+                        self.FindUsers(data_)
+                    elif data_['request'] == 'CREATECHAT':
+                        self.AddChat(data_)
+                    elif data_['request'] == 'MESSAGE':
+                        self.Messega(data_)
+                    elif data_['request'] == 'UpdateIcon':
+                        self.UpdateIcon(data_)
+                    elif data_['request'] == 'SignOut':
+                        self.SignOut()
+                except ConnectionResetError:
+                    self.Disconnect()
+                except Exception as err:
+                    logging.error(f'{self.name,err}')
+                    print(self.name,err)
+
+
 
     def SignOut(self):
         self.Activated = False
@@ -91,27 +94,29 @@ class Client(Thread):
     def Authorization(self, data: dict):
         user = self.Select_Data(Get_User, data['username'], one_request=True)
         if user is None: return self.Send_Data(Error('ThereIsNoSuchName'))
-        if not self.check_password(user[-2], data['password']): return self.Send_Data(Error('InvalidPassword'))
-        self.Activated = True
-        self.Send_Data(Ok_Authorization(user[0], user[1], user[2], user[-1]))
+        if not self.check_password(user[3], data['password']): return self.Send_Data(Error('InvalidPassword'))
+        self.Send_Data(Ok_Authorization(id = user[0],username= user[1],email= user[2],icon= user[-1]))
+        print(Ok_Authorization(id = user[0],username= user[1],email= user[2],icon= user[-1]))
         return self.LoadChatsandUsers(user[0])
 
     """Фунция регистриции, нового пользователя"""
 
     def Registration(self, data: dict):
         user = self.Select_Data(Get_User, data['username'], one_request=True)
-        if user is not None: return self.Send_Data(Error('NameAlreadyExists'))
+        if user:
+            print(1,user)
+            return self.Send_Data(Error('NameAlreadyExists'))
         username, email, password, Icon = data['username'], data['email'], data[
             'password'], data['icon']
         self.Activated = True
-        id = self.Insert_Data(Insert_Form_User, username, email, password, Icon,
-                              return_id=True)
+        self.Insert_Data(Insert_Form_User, username, email, password,datetime.now(), Icon)
+        id = self.Select_Data(Get_Id_User,username)
         return self.Send_Data(Ok_Registration(id, username, email))
 
     def Messega(self, data: dict):
-        __data = list(data.values())[1:]
-        self.Insert_Data(Insert_Form_Message, *__data)
-        self.Send_Data(Message(__data[0], __data[2]))
+        data = list(data.values())[1:]
+        self.Insert_Data(Insert_Form_Message, *data)
+        self.Send_Data(Message(data[0], data[2]))
 
     def UpdateIcon(self, data: dict):
         self.Insert_Data(UpdateIcomInDB, data['icon'], data['id_user'])
@@ -119,9 +124,10 @@ class Client(Thread):
 
     def AddChat(self, data: dict):
         title, listusers, icon = data['title'], data['list_id_users'], data['icon']
-        id = self.Insert_Data(Insert_Form_Chat, title, icon, return_id=True)
+        self.Insert_Data(Insert_Form_Chat, title, icon)
+        id = self.Select_Data(Get_Id_Chat,title)
         id_chat_user = list(zip(listusers, [id] * len(listusers)))
-        self.Insert_Data(Insert_Form_Chat_Participant, *id_chat_user, one_execut=False)
+        self.Insert_Data(Insert_Form_Chat_Participant, *id_chat_user)
 
     """Фунция получения чатов и пользователей"""
 
@@ -147,17 +153,20 @@ class Client(Thread):
         self.Send_Data(FindUsers(users))
 
     def Update(self, data: dict):
-        chats_id = data['chats_id']
-        user_id = data['user_id']
-        last_id_message_chat = data['last_id_message_chat']
+        chats_id,user_id,last_id_message_chat = data['chats_id'],data['user_id'],data['last_id_message_chat']
         users, messages = {}, []
+        if user_id and chats_id:
+            print(user_id, chats_id)
         chats = self.Select_Data(Get_Update_Chats, user_id, chats_id)
         if chats:
+            print(1)
             list_id_chat = list(map(lambda x: x[0], chats))
             users = self.Select_Data(Get_Users_In_Chat, list_id_chat, data['users_id'])
         if chats_id:
-            mes = self.Select_Data(Get_Find_Message_In_Chat, chats_id,user_id)
-            messages = list(filter(lambda x: last_id_message_chat[x[1]] < x[0],mes))
+            print(2)
+            mes = self.Select_Data(Get_Find_Message_In_Chat, chats_id, user_id)
+            messages = list(filter(lambda x: last_id_message_chat[x[1]] < x[0], mes))
+        print(users)
         messages = SortingListInDict(messages, 1) if messages != [] else {}
         users = SortingListInDict(users, 0) if users != [] else {}
         self.Send_Data(UpdateChatsAndUsers(users, messages, chats))

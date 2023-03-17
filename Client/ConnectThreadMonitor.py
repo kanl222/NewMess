@@ -10,7 +10,6 @@ class message_monitor(QThread):
 
     def __init__(self, parent=None):
         QThread.__init__(self, parent)
-        self.Activated = False
 
     def InfoSend(self,data,serialized_data):
         print('==================================')

@@ -14,3 +14,16 @@ def PixmapToBase64(Pixmap:QPixmap) -> bytes:
     Pixmap.save(buff, "PNG")
     ImageByte = ba.toBase64().data()
     return ImageByte
+
+
+class list_id(set):
+    def __init__(self,*args):
+        super().__init__(args)
+        
+    def to_list(self) -> list:
+        return list(self)
+
+    def __getitem__(self,other):
+        return self.to_list()[other]
+    
+

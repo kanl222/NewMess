@@ -1,4 +1,4 @@
-from Client.config import salt
+from config import salt
 from datetime import datetime
 import hashlib
 import base64
@@ -27,8 +27,7 @@ def Registration(name: str, email: str, password: str, icon: base64) -> dict:
         'request': 'REGISTRATION',
         'username': name,
         'email': email,
-        'password': hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt,
-                                        100000).hex(),
+        'password': hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt,100000).hex(),
         'icon': icon
     }
 
@@ -48,8 +47,8 @@ def SendMessage(id_user: int, id_chat: int, message: str) -> dict:
     time = datetime.now()
     return {
         'request': 'MESSAGE',
-        'id_chat': id_chat,
-        'id_user': id_user,
+        'id_user': id_chat,
+        'id_chat': id_user,
         'message': message,
         'datetime': time.strftime(format)
     }
